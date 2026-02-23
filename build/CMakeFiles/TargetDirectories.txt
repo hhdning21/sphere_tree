@@ -1,0 +1,12 @@
+/private/tmp/sphere_tree/build/CMakeFiles/spheretree.dir
+/private/tmp/sphere_tree/build/CMakeFiles/spheretree_shared.dir
+/private/tmp/sphere_tree/build/CMakeFiles/example_usage.dir
+/private/tmp/sphere_tree/build/CMakeFiles/example_obj_loader.dir
+/private/tmp/sphere_tree/build/CMakeFiles/example_simple_api.dir
+/private/tmp/sphere_tree/build/CMakeFiles/visualize_spheres_gl.dir
+/private/tmp/sphere_tree/build/CMakeFiles/edit_cache.dir
+/private/tmp/sphere_tree/build/CMakeFiles/rebuild_cache.dir
+/private/tmp/sphere_tree/build/CMakeFiles/list_install_components.dir
+/private/tmp/sphere_tree/build/CMakeFiles/install.dir
+/private/tmp/sphere_tree/build/CMakeFiles/install/local.dir
+/private/tmp/sphere_tree/build/CMakeFiles/install/strip.dir

@@ -1,0 +1,2 @@
+/usr/bin/ar qc libspheretree.a CMakeFiles/spheretree.dir/src/SphereTree.cpp.o CMakeFiles/spheretree.dir/src/SphereTreeAPI.cpp.o
+/usr/bin/ranlib libspheretree.a
