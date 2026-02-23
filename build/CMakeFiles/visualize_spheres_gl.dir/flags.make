@@ -4,7 +4,7 @@
 # compile CXX with /usr/bin/c++
 CXX_DEFINES = 
 
-CXX_INCLUDES = -I/private/tmp/sphere_tree/include -F/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks
+CXX_INCLUDES = -I/private/tmp/sphere_tree/include
 
 CXX_FLAGSarm64 = -std=gnu++17 -arch arm64
 
