@@ -4,16 +4,13 @@
  */
 
 #include "SphereTreeAPI.h"
-#include "SphereTree.h"
-#include "ObjLoader.h"
-#include "SphereExporter.h"
 #include <chrono>
 #include <iostream>
 
 namespace spheretree {
 
 // ============================================================================
-// Configuration Presets
+// Helper: Get configuration for quality preset
 // ============================================================================
 
 SphereTreeConfig getQualityConfig(TreeQuality quality) {
@@ -21,29 +18,22 @@ SphereTreeConfig getQualityConfig(TreeQuality quality) {
     
     switch (quality) {
         case TreeQuality::FAST:
-            config.maxSpheresPerNode = 4;
             config.maxDepth = 4;
-            config.minPointsToSubdivide = 20;
             config.fittingMethod = SphereTreeConfig::FittingMethod::RITTER;
             config.subdivisionStrategy = SphereTreeConfig::SubdivisionStrategy::OCTREE;
             break;
             
         case TreeQuality::BALANCED:
-            config.maxSpheresPerNode = 8;
             config.maxDepth = 6;
-            config.minPointsToSubdivide = 10;
             config.fittingMethod = SphereTreeConfig::FittingMethod::WELZL;
-            config.subdivisionStrategy = SphereTreeConfig::SubdivisionStrategy::K_MEANS;
+            config.subdivisionStrategy = SphereTreeConfig::SubdivisionStrategy::MEDIAL_AXIS;
             break;
             
         case TreeQuality::HIGH_DETAIL:
-            config.maxSpheresPerNode = 8;
             config.maxDepth = 8;
-            config.minPointsToSubdivide = 5;
             config.fittingMethod = SphereTreeConfig::FittingMethod::WELZL;
             config.subdivisionStrategy = SphereTreeConfig::SubdivisionStrategy::MEDIAL_AXIS;
             config.medialAxisSampleMultiplier = 15;
-            config.errorReductionFactor = 0.25;
             break;
     }
     
@@ -51,90 +41,43 @@ SphereTreeConfig getQualityConfig(TreeQuality quality) {
 }
 
 // ============================================================================
-// Factory Functions
+// Factory Functions - Build sphere trees
 // ============================================================================
 
 std::shared_ptr<SphereTree> buildTreeFromOBJ(const std::string& filename,
                                              TreeQuality quality) {
-    auto startTime = std::chrono::high_resolution_clock::now();
-    
-    std::cout << "Loading OBJ file: " << filename << std::endl;
-    
-    // Load OBJ file
-    ObjLoader loader;
-    if (!loader.load(filename)) {
-        std::cerr << "Failed to load OBJ file: " << filename << std::endl;
-        return nullptr;
-    }
-    
-    std::vector<Point3D> points = loader.getVertices();
-    std::cout << "Loaded " << points.size() << " vertices" << std::endl;
+    SphereTreeConfig config = getQualityConfig(quality);
+    std::vector<Point3D> points = loadObjFile(filename);
     
     if (points.empty()) {
-        std::cerr << "No vertices found in OBJ file" << std::endl;
+        std::cerr << "Error: Failed to load OBJ file: " << filename << std::endl;
         return nullptr;
     }
     
-    // Build tree with quality config
-    SphereTreeConfig config = getQualityConfig(quality);
-    auto tree = std::make_shared<SphereTree>(points, config);
-    
-    auto endTime = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
-    
-    std::cout << "Sphere tree built in " << duration.count() << " ms" << std::endl;
-    std::cout << "  Nodes: " << tree->getNodeCount() << std::endl;
-    std::cout << "  Spheres: " << tree->getSphereCount() << std::endl;
-    std::cout << "  Max depth: " << tree->getMaxDepth() << std::endl;
-    
-    return tree;
+    std::cout << "Loaded " << points.size() << " vertices from " << filename << std::endl;
+    return buildTree(points, config);
 }
 
 std::shared_ptr<SphereTree> buildTree(const std::vector<Point3D>& points,
-                                      TreeQuality quality) {
-    auto startTime = std::chrono::high_resolution_clock::now();
-    
-    std::cout << "Building sphere tree from " << points.size() << " points" << std::endl;
-    
-    if (points.empty()) {
-        std::cerr << "Cannot build tree from empty point set" << std::endl;
-        return nullptr;
-    }
-    
-    SphereTreeConfig config = getQualityConfig(quality);
-    auto tree = std::make_shared<SphereTree>(points, config);
-    
-    auto endTime = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
-    
-    std::cout << "Sphere tree built in " << duration.count() << " ms" << std::endl;
-    std::cout << "  Nodes: " << tree->getNodeCount() << std::endl;
-    std::cout << "  Spheres: " << tree->getSphereCount() << std::endl;
-    std::cout << "  Max depth: " << tree->getMaxDepth() << std::endl;
-    
-    return tree;
+                                     TreeQuality quality) {
+    return buildTree(points, getQualityConfig(quality));
 }
 
 std::shared_ptr<SphereTree> buildTree(const std::vector<Point3D>& points,
-                                      const SphereTreeConfig& config) {
-    auto startTime = std::chrono::high_resolution_clock::now();
-    
-    std::cout << "Building sphere tree from " << points.size() << " points (custom config)" << std::endl;
-    
+                                     const SphereTreeConfig& config) {
     if (points.empty()) {
-        std::cerr << "Cannot build tree from empty point set" << std::endl;
+        std::cerr << "Error: Empty point cloud" << std::endl;
         return nullptr;
     }
     
+    auto start = std::chrono::high_resolution_clock::now();
     auto tree = std::make_shared<SphereTree>(points, config);
+    auto end = std::chrono::high_resolution_clock::now();
     
-    auto endTime = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
-    
-    std::cout << "Sphere tree built in " << duration.count() << " ms" << std::endl;
-    std::cout << "  Nodes: " << tree->getNodeCount() << std::endl;
-    std::cout << "  Spheres: " << tree->getSphereCount() << std::endl;
-    std::cout << "  Max depth: " << tree->getMaxDepth() << std::endl;
+    double buildTime = std::chrono::duration<double, std::milli>(end - start).count();
+    std::cout << "Built sphere tree in " << buildTime << " ms" << std::endl;
+    std::cout << "Tree depth: " << tree->getMaxDepth() << std::endl;
+    std::cout << "Total spheres: " << tree->getSphereCount() << std::endl;
     
     return tree;
 }
@@ -144,53 +87,27 @@ std::shared_ptr<SphereTree> buildTree(const std::vector<Point3D>& points,
 // ============================================================================
 
 void exportToJSON(const SphereTree& tree, const std::string& filename) {
-    SphereExporter exporter;
-    
-    std::cout << "Exporting sphere tree to JSON: " << filename << std::endl;
-    
-    if (exporter.exportToJSON(tree, filename)) {
-        std::cout << "Successfully exported to " << filename << std::endl;
-    } else {
-        std::cerr << "Failed to export to " << filename << std::endl;
-    }
+    // Export tree structure to JSON - using CSV exporter as base
+    // Note: SphereExporter doesn't have JSON export, just CSV
+    std::cerr << "Warning: JSON export not yet implemented, using CSV format" << std::endl;
+    spheretree::exportDepthToCSV(tree, 0, filename);
 }
 
 void exportToOBJ(const SphereTree& tree, 
-                 const std::string& prefix,
+                 const std::string& prefix, 
                  int maxDepth) {
-    SphereExporter exporter;
+    int depth = (maxDepth < 0) ? tree.getMaxDepth() : std::min(maxDepth, tree.getMaxDepth());
     
-    int actualMaxDepth = maxDepth < 0 ? tree.getMaxDepth() : maxDepth;
-    
-    std::cout << "Exporting sphere tree to OBJ files (prefix: " << prefix 
-              << ", max depth: " << actualMaxDepth << ")" << std::endl;
-    
-    for (int depth = 0; depth < actualMaxDepth; ++depth) {
-        std::string filename = prefix + "_depth_" + std::to_string(depth) + ".obj";
-        
-        if (exporter.exportToOBJ(tree, filename, depth)) {
-            auto spheres = tree.getSpheresAtDepth(depth);
-            std::cout << "  Depth " << depth << ": " << spheres.size() 
-                      << " spheres -> " << filename << std::endl;
-        } else {
-            std::cerr << "  Failed to export depth " << depth << std::endl;
-        }
+    for (int d = 0; d <= depth; d++) {
+        std::string filename = prefix + "_depth_" + std::to_string(d) + ".obj";
+        spheretree::exportSpheresToOBJ(tree, d, filename);
     }
 }
 
 void exportToCSV(const SphereTree& tree,
                  int depth,
                  const std::string& filename) {
-    SphereExporter exporter;
-    
-    std::cout << "Exporting sphere tree depth " << depth << " to CSV: " << filename << std::endl;
-    
-    if (exporter.exportToCSV(tree, filename, depth)) {
-        auto spheres = tree.getSpheresAtDepth(depth);
-        std::cout << "Successfully exported " << spheres.size() << " spheres to " << filename << std::endl;
-    } else {
-        std::cerr << "Failed to export to " << filename << std::endl;
-    }
+    spheretree::exportDepthToCSV(tree, depth, filename);
 }
 
 } // namespace spheretree
